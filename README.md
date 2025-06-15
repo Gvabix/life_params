@@ -10,9 +10,7 @@ Celem projektu było stworzenie systemu do wczesnego wykrywania sepsy na podstaw
 
 ## Część sprzętowa (Arduino)
 
-- **Czujnik temperatury** - `MLX90614` – umożliwiający bezkontaktowy pomiar temperatury ciała.
-
-- **Pulsoksymetr** - `MAX30102` – mierzący poziom tętna (HR) oraz saturacji krwi (SpO₂).
+- **Pulsoksymetr** - `MAX30102` – mierzący poziom tętna (HR), temperaturę oraz saturację krwi (SpO₂).
 
 - **Czujnik impedancji skóry** - `Grove GSR` – pomiar przewodnictwa skóry.
 
@@ -20,29 +18,25 @@ Dane są wysyłane przez port szeregowy do komputera w celu dalszego przetwarzan
 
 ## Część programowa (Python + GUI)
 
-Aplikacja desktopowa została stworzona z użyciem biblioteki **Taipy GUI**. Jej funkcje obejmują:
+Interfejs użytkownika aplikacji został zrealizowany z wykorzystaniem systemu szablonów **Jinja2** dostępnego w ramach frameworka **Flask**, a także technologii **HTML**, **CSS** oraz **JavaScript**.
 
-- Interfejs graficzny do wyświetlania aktualnych danych z sensorów
-- Gromadzenie serii 20 próbek pomiarowych
-- Wczytywanie modelu `sepsis_lstm_model.keras` (LSTM)
-- Predykcja prawdopodobieństwa sepsy
-- Wizualizacja historii pomiarów na wykresie
+Strona główna prezentuje następujące informacje:
+- bieżące dane pochodzące z czujników: saturacja krwi (SpO₂), tętno (HR), temperatura ciała oraz przewodność skóry (GSR),
+- dane użytkownika: wiek i płeć,
+- liczbę zebranych próbek,
+- status działania systemu (np. oczekiwanie na dane, błąd odczytu, dane pobrane),
+- komunikaty ostrzegawcze (alerty) na podstawie analizy ostatnich wartości,
+- wynik predykcji ryzyka wystąpienia sepsy (wyrażony w procentach).
 
-## Działanie systemu
+Aplikacja dynamicznie odświeża dane, co umożliwia płynną aktualizację informacji bez potrzeby przeładowywania strony.
 
-1. Użytkownik uruchamia aplikację i wybiera dane demograficzne (wiek, płeć).
-2. System zbiera dane z sensorów i zapisuje je jako kolejne próbki.
-3. Po zebraniu 20 pomiarów możliwe jest wykonanie predykcji.
-4. Model LSTM analizuje dane i zwraca **prawdopodobieństwo sepsy**.
-5. Wynik i dane historyczne są wyświetlane w aplikacji.
-
-## Przykładowe dane zbierane przez system
-
-- **SpO₂**: poziom natlenienia krwi (%)
-- **HR**: tętno (uderzeń na minutę)
-- **Temperatura**: °C
-- **GSR**: przewodność skóry (wartość analogowa)
+Dodatkowo, w interfejsie zaimplementowano możliwość przełączania pomiędzy **trybem jasnym i ciemnym**, co zwiększa komfort użytkowania w różnych warunkach oświetleniowych.
 
 ## Model AI
 
-Model `sepsis_lstm_model.keras` został wytrenowany do analizy sekwencji danych biologicznych i przewidywania prawdopodobieństwa wystąpienia sepsy. Wymaga on dokładnie **20 próbek wejściowych** w określonym formacie.
+Model operuje na sekwencyjnych danych czasowych zebranych w 20-godzinnym oknie przesuwanym po czasie hospitalizacji pacjenta. Każda próbka danych ma postać macierzy o wymiarach 20 x 6, gdzie 20 to liczba kolejnych godzin, a 6 to liczba wybranych cech fizjologicznych:
+
+- **HR** – tętno (Heart Rate),
+- **O2Sat** – saturacja krwi tlenem,
+- **Temp** – temperatura ciała,
+- **GSR** - impedancja skóry,
