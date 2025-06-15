@@ -1,153 +1,320 @@
-
-
-
 <!DOCTYPE html>
 <html lang="pl">
 
 <head>
-    <meta charset="UTF-8">
+    <meta charset="UTF-8" />
     <title>Sepsis Monitor</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="/static/script.js" defer></script>
+    <script src="{{ url_for('static', filename='script.js') }}" defer></script>
     <style>
+        /* Definicja zmiennych kolorów dla light i dark mode */
+        body[data-theme='light'] {
+            --bg-color: #f4f6f8;
+            --text-color: #333;
+            --container-bg: #fff;
+            --container-shadow: rgba(0, 0, 0, 0.1);
+            --primary-color: #9c4df5;
+            --primary-hover: #8c26fa;
+            --sensor-bg: #e8f0fe;
+            --sensor-border: #c5d2f4;
+            --sensor-text: #282a2c;
+            --alert-bg: #fff3cd;
+            --alert-border: #ffeeba;
+            --alert-text: rgba(250, 40, 40, 0.99);
+            --status-color: #282a2c;
+            --chart-bg: #fafafa;
+            --chart-border: #ccc;
+        }
+
+        body[data-theme='dark'] {
+            --bg-color: #343637;
+            --text-color: #ddd;
+            --container-bg: #2b2b2b;
+            --container-shadow: rgb(40, 42, 44);
+            --primary-color: #9c4df5;
+            --primary-hover: #8c26fa;
+            --sensor-bg: #2a2a2a;
+            --sensor-border: #3a3a3a;
+            --sensor-text: #8ab4f8;
+            --alert-bg: #ed712e;
+            --alert-border: #e11c0b;
+            --alert-text: #ffd54f;
+            --status-color: #82aaff;
+            --chart-bg: #272727;
+            --chart-border: #444;
+        }
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f4f6f8;
-            color: #333;
-            margin: 0;
-            padding: 2em;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            padding: 4em;
+            transition: background-color 0.4s, color 0.4s;
+        }
+
+        h1,
+        h2 {
+            text-align: center;
         }
 
         h1 {
-            color: #005580;
-            text-align: center;
-            margin-bottom: 1em;
+            font-weight: 1000;
+            color: var(--primary-color);
+            margin-bottom: 0.6em;
+        }
+
+        h2 {
+            font-weight: 700;
+            color: var(--status-color);
+            margin-top: 2.5em;
         }
 
         .container {
-            max-width: 700px;
+            max-width: 1100px;
             margin: auto;
-            background: #fff;
+            background: var(--container-bg);
             padding: 2em;
             border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 10px var(--container-shadow);
+            box-sizing: border-box;
+            transition: background-color 0.4s, box-shadow 0.4s;
+            position: relative;
+        }
+
+        /* Przycisk przełączania motywu */
+        #theme-toggle {
+            position: absolute;
+            top: 1em;
+            right: 1em;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 0.4em 1em;
+            cursor: pointer;
+            font-weight: 700;
+            transition: background-color 0.3s ease;
+            user-select: none;
+        }
+
+        #theme-toggle:hover {
+            background-color: var(--primary-hover);
         }
 
         .form-group {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1em;
+            display: flow;
+            margin-bottom: 2em;
         }
 
         .form-group label {
             flex: 1;
-            font-weight: bold;
+            font-weight: 600;
+            color: var(--text-color);
+            font-size: 1rem;
         }
 
         .form-group input,
         .form-group select {
             flex: 2;
-            padding: 0.5em;
-            border-radius: 6px;
-            border: 1px solid #ccc;
+            padding: 0.6em 0.8em;
+            border-radius: 8px;
+            border: 1px solid #aaa;
+            font-size: 1rem;
+            transition: border-color 0.3s ease, background-color 0.4s, color 0.4s;
+            background-color: var(--container-bg);
+            color: var(--text-color);
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            border-color: var(--primary-color);
+            outline: none;
         }
 
         button {
-            padding: 0.7em 1.2em;
-            margin-right: 1em;
-            margin-bottom: 1em;
-            border: none;
-            border-radius: 6px;
-            background-color: #0077cc;
+            background-color: var(--primary-color);
             color: white;
-            font-weight: bold;
+            font-weight: 700;
+            border-radius: 10px;
+            padding: 0.8em 1.4em;
+            font-size: 1.1rem;
+            box-shadow: 0 4px 10px rgba(0, 119, 204, 0.3);
+            transition: background-color 0.3s ease;
             cursor: pointer;
-            transition: background-color 0.3s;
+            user-select: none;
         }
 
         button:hover {
-            background-color: #005fa3;
-        }
-
-        .status-box {
-            padding: 1em;
-            margin-top: 1em;
-            margin-bottom: 1.5em;
-            background-color: #eef6ff;
-            border-left: 6px solid #0077cc;
-            border-radius: 6px;
+            background-color: var(--primary-hover);
         }
 
         .sensor-data {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
             gap: 1em;
-            margin-top: 1em;
+            margin-top: 1.5em;
         }
 
         .sensor {
-            background: #f9f9f9;
-            padding: 1em;
-            border-radius: 8px;
-            border: 1px solid #ddd;
+            background: var(--sensor-bg);
+            padding: 1em 1.2em;
+            border-radius: 12px;
+            border: 1px solid var(--sensor-border);
             text-align: center;
-            font-size: 1.1em;
+            font-weight: 600;
+            color: var(--sensor-text);
+            font-size: 1.05rem;
+            box-shadow: inset 0 0 10px rgba(215, 227, 252, 0.5);
+            transition: background-color 0.4s, color 0.4s;
         }
 
-        .highlight {
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5em;
+            margin-top: 2em;
+        }
+
+        .chart-block {
+            background: var(--chart-bg);
+            padding: 1.2em 1em;
+            border-radius: 12px;
+            border: 1px solid var(--chart-border);
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            transition: background-color 0.4s, border-color 0.4s;
+        }
+
+        .chart-block canvas {
+            max-width: 100%;
+            height: 180px !important;
+        }
+
+        .chart-label {
+            margin-top: 0.5em;
             font-weight: bold;
-            font-size: 1.2em;
-            color: #c40000;
+            font-size: 0.95em;
+            color: var(--text-color);
+        }
+
+        #status {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--status-color);
+            transition: color 0.4s;
+        }
+
+        #alerts-container {
+            margin-top: 1em;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .alert-message {
+            background-color: var(--alert-bg);
+            border: 1px solid var(--alert-border);
+            padding: 0.7em 1em;
+            font-size: 20px;
+            margin-bottom: 0.5em;
+            border-radius: 8px;
+            color: var(--alert-text);
+            font-weight: 900;
+            box-shadow: 0 1px 3px rgba(255, 236, 179, 0.5);
+            transition: background-color 0.4s, color 0.4s;
+        }
+
+        @media (max-width: 600px) {
+            .charts-grid {
+                grid-template-columns: 1fr !important;
+            }
+
+            .sensor-data {
+                grid-template-columns: 1fr !important;
+            }
         }
     </style>
 </head>
 
-<body>
-    <div class="container">
-        <h1>Sepsis Monitor</h1>
+<body data-theme="light">
+<div class="container">
+    <button id="theme-toggle" aria-label="Toggle dark/light mode">Tryb ciemny</button>
+    <h1>Sepsis Monitor</h1>
 
-        <div class="form-group">
-            <label for="age">Wiek:</label>
-            <input type="number" id="age" value="{{ data.age }}" />
-        </div>
-        <div class="form-group">
-            <label for="gender">Płeć:</label>
-            <select id="gender">
-                <option value="Mężczyzna" {% if data.gender=='Mężczyzna' %}selected{% endif %}>Mężczyzna</option>
-                <option value="Kobieta" {% if data.gender=='Kobieta' %}selected{% endif %}>Kobieta</option>
-            </select>
-        </div>
-
-        <div class="form-group">
-            <button onclick="fetchData()">Pobierz dane</button>
-            <button onclick="predict()">Przewiduj sepsę</button>
-        </div>
-
-        <div class="status-box">
-            <strong>Status:</strong> <span id="status">{{ data.status }}</span>
-        </div>
-
-        <div class="sensor-data">
-            <div class="sensor">SpO2: <span id="spo2">{{ data.spo2 }}</span></div>
-            <div class="sensor">HR: <span id="hr">{{ data.hr }}</span></div>
-            <div class="sensor">Temp: <span id="temp">{{ data.temp }}</span></div>
-            <div class="sensor">GSR: <span id="gsr">{{ data.gsr }}</span></div>
-            <div class="sensor">ECG: <span id="ecg">{{ data.ecg }}</span></div>
-            <div class="sensor">Zebrane próbki: <span id="samples">{{ data.samples }}</span>/20</div>
-        </div>
-
-        <h2 style="margin-top: 2em;">Prawdopodobieństwo sepsy: <span class="highlight" id="probability">{{
-                data.probability }}</span>%</h2>
-        
-        <h2 style="margin-top: 2em;">Wykresy pomiarów</h2>
-        <canvas id="spo2Chart" height="150"></canvas>
-        <canvas id="hrChart" height="150"></canvas>
-        <canvas id="tempChart" height="150"></canvas>
-        <canvas id="gsrChart" height="150"></canvas>
-        <canvas id="ecgChart" height="150"></canvas>
-                
+    <div class="form-group">
+        <label for="age">Wiek:</label>
+        <input type="number" id="age" value="{{ data.age }}" />
     </div>
+    <div class="form-group">
+        <label for="gender">Płeć:</label>
+        <select id="gender">
+            <option value="Mężczyzna" {% if data.gender=='Mężczyzna' %}selected{% endif %}>Mężczyzna</option>
+            <option value="Kobieta" {% if data.gender=='Kobieta' %}selected{% endif %}>Kobieta</option>
+        </select>
+    </div>
+
+    <button onclick="predict()">Przewiduj sepsę</button>
+
+    <div style="margin-top:1em;">
+        <strong>Status:</strong> <span id="status">{{ data.status }}</span>
+    </div>
+
+    <!-- Sekcja alertów -->
+    <div id="alerts-container" style="margin-top:1em;">
+        {% if data.alerts %}
+        {% for alert in data.alerts %}
+        <div class="alert-message">{{ alert }}</div>
+        {% endfor %}
+        {% else %}
+        <div class="alert-message">Wszystkie dane  w normie</div>
+        {% endif %}
+    </div>
+
+    <div class="sensor-data">
+        <div class="sensor">SpO2: <span id="spo2">{{ data.spo2 }}</span></div>
+        <div class="sensor">HR: <span id="hr">{{ data.hr }}</span></div>
+        <div class="sensor">Temp: <span id="temp">{{ data.temp }}</span></div>
+        <div class="sensor">GSR: <span id="gsr">{{ data.gsr }}</span></div>
+        <div class="sensor">Zebrane próbki: <span id="samples">{{ data.samples }}</span>/20</div>
+    </div>
+
+    <h2>Prawdopodobieństwo sepsy: <span id="probability">{{ data.probability }}</span>%</h2>
+
+    <h2>Wykresy</h2>
+    <div class="charts-grid">
+        <div class="chart-block">
+            <canvas id="spo2Chart"></canvas>
+            <div class="chart-label">SpO₂ [%]</div>
+        </div>
+        <div class="chart-block">
+            <canvas id="hrChart"></canvas>
+            <div class="chart-label">HR [bpm]</div>
+        </div>
+        <div class="chart-block">
+            <canvas id="tempChart"></canvas>
+            <div class="chart-label">Temperatura [°C]</div>
+        </div>
+        <div class="chart-block">
+            <canvas id="gsrChart"></canvas>
+            <div class="chart-label">GSR</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Przełączanie trybu dark/light
+    const btn = document.getElementById('theme-toggle');
+    const body = document.body;
+
+    btn.addEventListener('click', () => {
+        if (body.getAttribute('data-theme') === 'light') {
+            body.setAttribute('data-theme', 'dark');
+            btn.textContent = 'Tryb jasny';
+        } else {
+            body.setAttribute('data-theme', 'light');
+            btn.textContent = 'Tryb ciemny';
+        }
+    });
+</script>
 </body>
 
 </html>
