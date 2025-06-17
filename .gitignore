@@ -3,3 +3,11 @@
 .vscode/c_cpp_properties.json
 .vscode/launch.json
 .vscode/ipch
+# Ignore macOS system files
+.DS_Store
+
+# Ignore dataset folder
+dataset/
+
+# Ignore entire Adafruit_MLX90614 library folder
+lib/Adafruit_MLX90614/
